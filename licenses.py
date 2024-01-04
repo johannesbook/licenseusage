@@ -1,7 +1,6 @@
 #checking license usage @ Lundinova during 2023
 #Johannes Book 2024..
 
-from dash import dcc
 import plotly.express as px
 import pandas
 from datetime import datetime
@@ -18,9 +17,10 @@ for i in df.index:
 
 #initialize output dictionary, to be used for plotting
 out = {}
-for h in range(365*24):
+for h in range(365*24): #number of hours during the year
     out[h] = {"count":0}
     out[h].update({"who":""})
+    out[h]["time"] = startDate + timedelta(hours=h)
 
 #clean up data, calculate max #licenses used every hour for plotting 
 #start with hour blocks to save memory, perhaps try minute-resolution later to see if it makes any difference
@@ -35,25 +35,19 @@ for row in data:
     if ((license != "RMVG-3AF3") and (license != "T439-P5NG") and (license != "PMAM-4M4E")): #do not include our viewer licenses in stats
         for h in range(hogHour,releaseHour):
             out[h]["count"] = out[h]["count"] + 1 
-            out[h]["who"] = out[h]["who"] + user + " "
+            out[h]["who"] = out[h]["who"] + "<br>" + user
+            out[h]["time"] = startDate + timedelta(hours=h)
 
 #Plot
-xAxis = []
-for t in out.keys(): #convert hours (1 -> 8740) to datetime
-    t = startDate + timedelta(hours=t)
-    xAxis.append(t)
-
-yAxis = []
 hoverData = []
-for val in out.values(): #"count" values for y-axis
-    yAxis.append(val["count"])   
+for val in out.values(): 
     hoverData.append(val["who"])
     
-#fig = px.line(x=xAxis,y=yAxis) works
-fig = px.line(out,x=xAxis,y="count",hover_data="who")
+fig = px.line(out.values(),x="time",y="count",hover_data="who")
 fig.show()
 
-#next steps: 
-#Add hoverdata (who)
-#make it look nicer
+#backlog
+#count number of hours of full usage
+#display duplicate users (single user with more than one license)
+#make graph look nicer
 #display day of week
