@@ -24,8 +24,15 @@ for h in range(365*24): #number of hours during the year
 
 #clean up data, calculate max #licenses used every hour for plotting 
 #start with hour blocks to save memory, perhaps try minute-resolution later to see if it makes any difference
+hoursAtNine = 0
+duplicateCounts = {}
+duplicateHours = 0
+hourOfDay = [0]*24
+weekDay = [0]*7
+userHours = {}
 
 for row in data:
+    counts = {}
     license = row[1]
     user = row[2]
     hogTime = datetime.strptime(row[5],date_format)
@@ -37,17 +44,44 @@ for row in data:
             out[h]["count"] = out[h]["count"] + 1 
             out[h]["who"] = out[h]["who"] + "<br>" + user
             out[h]["time"] = startDate + timedelta(hours=h)
+            hour = int(out[h]["time"].strftime("%H"))
+            hourOfDay[hour] += 1
+            weekDay[int(out[h]["time"].weekday())] += 1
 
-#Plot
-hoverData = []
-for val in out.values(): 
-    hoverData.append(val["who"])
-    
-fig = px.line(out.values(),x="time",y="count",hover_data="who")
+            #user toplist
+            if hour > 7 and hour < 17: #(disregard off-hours work since it usually is pc's left on)
+                if user not in userHours:
+                    userHours[user] = 1
+                else:
+                    userHours[user] = userHours.get(user) + 1
+
+            #how many hours are att full allocation, and any double-licence-hoggers? 
+            if out[h]["count"] == 9:  
+                hoursAtNine = hoursAtNine + 1
+                #print("Full allocation!")
+                #figure out if this is with duplicate user
+                users = out[h]["who"].split("<br>")
+                users.pop(0)
+                for user in users:
+                    if user not in duplicateCounts:
+                        duplicateCounts[user] = 0
+                    duplicateCounts[user] += 1
+                    if duplicateCounts[user] > 1:
+                        #print("...but ",user," has ",duplicateCounts[user]," licenses hogged.")
+                        duplicateHours += 1
+                duplicateCounts.clear()
+
+#Plot and print
+print("During 2023,",hoursAtNine,"hours spent @ 9 licenses used. Hoever, during these hours",duplicateHours,"were with someone hogging more than one license")
+fig = px.bar(out.values(),x="time",y="count",hover_data="who",title="Allocation 2023")
+fig.show()
+fig = px.bar(hourOfDay,title="Usage during the day")
+fig.show()
+fig = px.bar(weekDay,title="Usage during the week")
+fig.show()
+fig = px.bar(x=userHours.keys(), y=userHours.values(), title="Hours with a license, total")
 fig.show()
 
+
 #backlog
-#count number of hours of full usage
-#display duplicate users (single user with more than one license)
-#make graph look nicer
-#display day of week
+#test second-level resolution
